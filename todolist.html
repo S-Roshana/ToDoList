@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #e3f2fd;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.2);
+            width: 400px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+        h2 {
+            text-align: center;
+            margin-bottom: 15px;
+            color: #007bff;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: 0.3s;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+            flex-grow: 1;
+            overflow-y: auto;
+            max-height: 50vh;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            transition: all 0.3s;
+            font-size: 16px;
+        }
+        .completed {
+            text-decoration: line-through;
+            background: #d4edda;
+            color: #155724;
+        }
+        .actions button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            margin-left: 8px;
+            font-size: 18px;
+        }
+        .clear-btn {
+            width: 100%;
+            margin-top: 10px;
+            background: #dc3545;
+        }
+        .clear-btn:hover {
+            background: #c82333;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            width: 300px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .modal button {
+            margin-top: 10px;
+            padding: 8px 15px;
+        }
+        #editInput {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>To-Do List ✅</h2>
+        <div class="input-group">
+            <input type="text" id="taskInput" placeholder="Enter a task...">
+            <button onclick="addTask()">Add</button>
+        </div>
+        <ul id="taskList"></ul>
+        <button class="clear-btn" onclick="confirmClearAll()">Clear All Tasks</button>
+    </div>
+
+    <!-- Modal for Alerts -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <p id="modal-message"></p>
+            <button onclick="closeModal()">OK</button>
+        </div>
+    </div>
+
+    <!-- Modal for Delete and Edit -->
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <p id="confirmMessage"></p>
+            <button id="confirmBtn">Confirm</button>
+            <button onclick="closeConfirmModal()">Cancel</button>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editTaskModal" class="modal">
+        <div class="modal-content">
+            <h3>Edit Task</h3>
+            <input type="text" id="editInput">
+            <button id="saveEditBtn">Save</button>
+            <button onclick="closeEditTaskModal()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+        function showModal(message) {
+            document.getElementById("modal-message").textContent = message;
+            document.getElementById("modal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("modal").style.display = "none";
+        }
+
+        function showConfirmModal(message, action, index) {
+            document.getElementById("confirmMessage").textContent = message;
+            document.getElementById("confirmBtn").onclick = function() {
+                action(index);
+                closeConfirmModal();
+            };
+            document.getElementById("confirmModal").style.display = "flex";
+        }
+
+        function closeConfirmModal() {
+            document.getElementById("confirmModal").style.display = "none";
+        }
+
+        function showEditTaskModal(index) {
+            document.getElementById("editTaskModal").style.display = "flex";
+            document.getElementById("editInput").value = tasks[index].text;
+            document.getElementById("saveEditBtn").onclick = function() {
+                saveEditedTask(index);
+            };
+        }
+
+        function closeEditTaskModal() {
+            document.getElementById("editTaskModal").style.display = "none";
+        }
+
+        function saveEditedTask(index) {
+            let newTask = document.getElementById("editInput").value;
+            if (newTask.trim() !== "") {
+                tasks[index].text = newTask;
+                renderTasks();
+                closeEditTaskModal();
+            } else {
+                showModal("Task cannot be empty!");
+            }
+        }
+
+        function renderTasks() {
+            const taskList = document.getElementById("taskList");
+            taskList.innerHTML = "";
+            tasks.forEach((task, index) => {
+                let li = document.createElement("li");
+                li.className = task.completed ? "completed" : "";
+                li.innerHTML = `
+                    <span onclick="toggleComplete(${index})">${task.text}</span>
+                    <div class="actions">
+                        <button onclick="showEditTaskModal(${index})">✏️</button>
+                        <button onclick="showConfirmModal('Are you sure you want to delete this task?', deleteTask, ${index})">❌</button>
+                    </div>
+                `;
+                taskList.appendChild(li);
+            });
+            localStorage.setItem("tasks", JSON.stringify(tasks));
+        }
+
+        function addTask() {
+            let taskInput = document.getElementById("taskInput");
+            if (taskInput.value.trim() === "") {
+                showModal("Please enter a task!");
+                return;
+            }
+            tasks.push({ text: taskInput.value, completed: false });
+            taskInput.value = "";
+            renderTasks();
+        }
+
+        function toggleComplete(index) {
+            tasks[index].completed = !tasks[index].completed;
+            renderTasks();
+        }
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            renderTasks();
+        }
+
+        function confirmClearAll() {
+            showConfirmModal("Are you sure you want to clear all tasks?", clearAllTasks, null);
+        }
+
+        function clearAllTasks() {
+            tasks = [];
+            renderTasks();
+        }
+
+        renderTasks();
+    </script>
+</body>
+</html>
